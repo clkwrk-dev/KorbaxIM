@@ -41,7 +41,7 @@ function onConnect(status)
         kbxServer.log('Connected.');
         kbxServer.connection.send($pres());
         kbxServer.connection.addHandler(onMessage, null, 'message', null, null, null);
-        //connection.addHandler(onSubscriptionRequest, null, "presence", "subscribe");
+        kbxServer.connection.addHandler(onSubscriptionRequest, null, "presence", "subscribe");
         //connection.addHandler(onPresence, null, "presence");
         loginSuccess();
 
@@ -62,8 +62,18 @@ function onMessage(msg) {
       var body = elems[0];
       kbxServer.log('CHAT: I got a message from ' + from + ': ' + Strophe.getText(body));
     }
-    // we must return true to keep the handler alive.  
-    // returning false would remove it after it finishes.
+    return true;
+  }
+
+  function onSubscriptionRequest(stanza) {
+    if(stanza.getAttribute('type') == 'subscribe') {
+      var from = $(stanza).attr('from');
+      kbxServer.log('onSubscriptionRequest: from=' + from);
+      kbxServer.connection.send($pres({
+        'to': from,
+        'type': 'subscribed'
+      }));
+    }
     return true;
   }
 
@@ -78,10 +88,68 @@ function onMessage(msg) {
   }
 
   function rosterCallback(iq) {
-    kbxServer.log("Roster");
+    var rosterDiv = document.getElementById('contacts');
+    var fragment = document.createDocumentFragment();
+
+    /**
+     * Dynamically create HTML elements using JavaScript.
+     */
+    // <a></a> Element
+    var hrefEl = document.createElement('a');
+    hrefEl.href = "#";
+    hrefEl.className = "filterMembers all offline contact";
+    hrefEl.setAttribute('data-toggle', 'list');
+
+    // <img></img> Element
+    var imgEl = document.createElement('img');
+    imgEl.className = "avatar-md";
+    imgEl.src = "dist/img/avatars/avatar-female-1.jpg";
+    imgEl.setAttribute('data-toggle', "tooltip");
+    imgEl.setAttribute('data-placement', "top");
+    imgEl.alt = "avatar";
+
+    // <div></div> Elements
+    var divEl1 = document.createElement('div');
+    divEl1.className = "status";
+    var divEl2 = document.createElement('div');
+    divEl2.className = "data";
+    var divEl3 = document.createElement('div');
+    divEl3.className = "person-add";
+
+    // <i></i> Elements
+    var iEl1 = document.createElement('i');
+    iEl1.className = "material-icons offline";
+    var iEl2 = document.createElement('i');
+    iEl2.className = "material-icons";
+    iEl2.innerText = "person";
+
+    // <h5></h5> Element
+    var h5El = document.createElement('h5');
+
+    // <p></p> Element
+    var pEl = document.createElement('p');
+
+    kbxServer.log(iq);
     $(iq).find('item').each(function() {
-      var jid = $(this).attr('jid'); // The jabber_id of your contact
-      // You can probably put them in a unordered list and and use their jids as ids.
-      kbxServer.log('	>' + jid);
+      //var jid = $(this).attr('jid');
+
+      imgEl.title = $(this).attr('name');
+      iEl1.innerText = "fiber_manual_record";
+      divEl1.appendChild(iEl1)
+
+      h5El.innerText = $(this).attr('name');
+      pEl.innerText = "Sofia, Bulgaria";
+      divEl2.appendChild(h5El);
+      divEl2.appendChild(pEl);
+
+      divEl3.appendChild(iEl2);
+
+      hrefEl.appendChild(imgEl);
+      hrefEl.appendChild(divEl1);
+      hrefEl.appendChild(divEl2);
+      hrefEl.appendChild(divEl3);
+      
+      fragment.appendChild(hrefEl)
     });
+    rosterDiv.appendChild(fragment);
   }
